@@ -1,6 +1,6 @@
 import BaseHTTPServer
 import sys, random, os, socket, urllib, json, urlparse, cgi
-from firebase import firebase
+
 
 
 
