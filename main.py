@@ -7,6 +7,7 @@ pwd = ''
 
 class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 	def do_GET(self):
+		print self.headers
 		if 'Authorization' not in self.headers:
 
 			self.send_response(401, 'Not authorized')
