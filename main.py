@@ -8,29 +8,34 @@ pwd = ''
 class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 	def do_GET(self):
 		print self.headers
-		if 'Authorization' not in self.headers:
-
-			self.send_response(401, 'Not authorized')
-			self.send_header('Content-type', 'text/html')
-			self.send_header('WWW-Authenticate', 'Basic realm="Enter a username and password"')
+		if self.headers['X-Forwarded-Proto'] != 'https':
+			self.send_response(301, 'Must use SSL')
+			self.send_header('Location', 'https://icse.herokuapp.com')
 			self.end_headers()
 		else:
-			try:
-				u = base64.b64decode(self.headers['Authorization'].split()[1])
-				print u
-				if u == pwd:
-					self.send_response(200, 'OK')
-					self.send_header('Content-type', 'text/html')
-					self.end_headers()
-					self.wfile.write(data)
-				else:
-					raise Exception
-			except Exception, e:
-				print e
+			if 'Authorization' not in self.headers:
+
 				self.send_response(401, 'Not authorized')
 				self.send_header('Content-type', 'text/html')
 				self.send_header('WWW-Authenticate', 'Basic realm="Enter a username and password"')
 				self.end_headers()
+			else:
+				try:
+					u = base64.b64decode(self.headers['Authorization'].split()[1])
+					print u
+					if u == pwd:
+						self.send_response(200, 'OK')
+						self.send_header('Content-type', 'text/html')
+						self.end_headers()
+						self.wfile.write(data)
+					else:
+						raise Exception
+				except Exception, e:
+					print e
+					self.send_response(401, 'Not authorized')
+					self.send_header('Content-type', 'text/html')
+					self.send_header('WWW-Authenticate', 'Basic realm="Enter a username and password"')
+					self.end_headers()
 
 
 if 'PORT' in os.environ:
