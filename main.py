@@ -8,8 +8,11 @@ from bs4 import BeautifulSoup as bs
 abbrev = {
 	"COMPUTER APPLICATIONS" : "CS",
 	"HISTORY CIVICS & GEOGRAPHY" : "HCG",
-	"MATHEMATICS" : "MATH"
+	"MATHEMATICS" : "MATH",
+	"BIOLOGY" : "BIO"
 }
+
+mimetable = {'.html':'text/html', '.css':'text/css'}
 
 def populate(json):
 	soup = bs(open('web/results.html').read())
@@ -120,6 +123,7 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 	def do_POST(self):
 		if self.headers['X-Forwarded-Proto'] != 'https':
 			self.send_response(301, 'Must use SSL')
+			self.send_response('Content')
 			self.send_header('Location', 'https://icse.herokuapp.com')
 			self.end_headers()
 		else:
@@ -130,6 +134,7 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 			if 'pass' in content and content['pass'][0] == os.environ['PASSWORD']:
 				if 'name' in content:
 					self.send_response(200, 'OK')
+					self.send_header('Content-type', 'text/html')
 					self.end_headers()
 					resp = self.db.icse.processed.find_one({"name":content['name'][0].upper()})
 					self.wfile.write(populate(resp))
@@ -137,8 +142,10 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 				if 'school' in content:
 					print 'FIZZ'
 					self.send_response(200, 'OK')
+					self.send_header('Content-type', 'text/html')
 					self.end_headers()
 					resp = self.db.icse.processed.find({"school":content['school'][0].upper()}).sort("name")
+
 					self.wfile.write(populate_school(resp))
 
 
