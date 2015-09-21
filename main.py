@@ -3,6 +3,7 @@ import os
 import random
 import urlparse
 import pymongo
+import sys
 from bs4 import BeautifulSoup as bs
 
 abbrev = {
@@ -18,7 +19,6 @@ def populate(json):
 	soup = bs(open('web/results.html').read())
 	headers = soup.find(id="headers")
 	data = soup.find(id="data")
-	print json
 	for i in ['Name', 'UID', 'School', 'Score']:
 		h  = soup.new_tag("th")
 		h.string = i
@@ -59,7 +59,6 @@ def populate_school(json):
 	soup = bs(open('web/results.html').read())
 	headers = soup.find(id="headers")
 	data = soup.find(id="data")
-	print json
 	for i in ['Name', 'UID', 'Score']:
 		h  = soup.new_tag("th")
 		h.string = i
@@ -77,7 +76,6 @@ def populate_school(json):
 			h.string = j[1]
 		headers.append(h)
 
-	print l
 	for i in l:
 		row = soup.new_tag("tr")
 		for j in ['name', '_id', 'best5']:
@@ -102,7 +100,7 @@ def populate_school(json):
 
 class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 	def do_GET(self):
-		if self.headers['X-Forwarded-Proto'] != 'https':
+		if '--force-ssl' in sys.argv and self.headers['X-Forwarded-Proto'] != 'https':
 			self.send_response(301, 'Must use SSL')
 			self.send_header('Location', 'https://icse.herokuapp.com' + self.path)
 			self.end_headers()
@@ -121,7 +119,7 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 			  self.end_headers()
 
 	def do_POST(self):
-		if self.headers['X-Forwarded-Proto'] != 'https':
+		if '--force-ssl' in sys.argv and self.headers['X-Forwarded-Proto'] != 'https':
 			self.send_response(301, 'Must use SSL')
 			self.send_response('Content')
 			self.send_header('Location', 'https://icse.herokuapp.com')
@@ -129,8 +127,6 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 		else:
 			content = self.rfile.read(int(self.headers['Content-Length']))
 			content = urlparse.parse_qs(content)
-			print content
-			print self.password
 			if 'pass' in content and content['pass'][0] == os.environ['PASSWORD']:
 				if 'name' in content:
 					self.send_response(200, 'OK')
@@ -138,20 +134,25 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 					self.end_headers()
 					resp = self.db.icse.processed.find_one({"name":content['name'][0].upper()})
 					if resp is None:
-						self.wfile.write(open('404.html').read())
+						self.wfile.write(open('web/404.html').read())
 					else:
 						self.wfile.write(populate(resp).encode('utf-8'))
 					
 				if 'school' in content:
-					print 'FIZZ'
 					self.send_response(200, 'OK')
 					self.send_header('Content-type', 'text/html')
 					self.end_headers()
 					resp = self.db.icse.processed.find({"school":content['school'][0].upper()}).sort("name")
-					if resp is None:
-						self.wfile.write(open('404.html').read())
+					print resp
+					if resp.count() == 0:
+						self.wfile.write(open('web/404-school.html').read())
 					else:
 						self.wfile.write(populate_school(resp).encode('utf-8'))
+			else:
+				self.send_response(403, 'Not authorised')
+				self.send_header('Content-type', 'text/html')
+				self.end_headers()
+				self.wfile.write(open('web/403.html').read())
 
 
 
