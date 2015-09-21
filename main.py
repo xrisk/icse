@@ -136,17 +136,23 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 					self.send_response(200, 'OK')
 					self.send_header('Content-type', 'text/html')
 					self.end_headers()
-					resp = self.db.icse.processed.find_one({"name":content['name'][0].upper()})
-					self.wfile.write(populate(resp))
+					try:
+						resp = self.db.icse.processed.find_one({"name":content['name'][0].upper()})
+					except:
+						self.wfile.write(open('404.html').read())
+					self.wfile.write(populate(resp).encode('utf-8'))
 					
 				if 'school' in content:
 					print 'FIZZ'
 					self.send_response(200, 'OK')
 					self.send_header('Content-type', 'text/html')
 					self.end_headers()
-					resp = self.db.icse.processed.find({"school":content['school'][0].upper()}).sort("name")
+					try:
+						resp = self.db.icse.processed.find({"school":content['school'][0].upper()}).sort("name")
+					except:
+						self.wfile.write(open('404.html').read())
 
-					self.wfile.write(populate_school(resp))
+					self.wfile.write(populate_school(resp).encode('utf-8'))
 
 
 
