@@ -4,7 +4,23 @@ import random
 import urlparse
 import pymongo
 import sys
+import logging
+import tempfile
+import sha
+import gzip
 from bs4 import BeautifulSoup as bs
+
+def gzip_content(content):
+	h = sha.new(content).hexdigest()
+	if os.path.isfile(h):
+		with open(h,'rb') as fin:
+			return fin.read()
+	with gzip.open(h, 'wb') as fout:
+		fout.write(content)
+	fout.close()
+	with open(h, 'rb') as fin:
+		return fin.read()
+
 
 abbrev = {
 	"COMPUTER APPLICATIONS" : "CS",
@@ -103,7 +119,7 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 		if '--force-ssl' in sys.argv and self.headers['X-Forwarded-Proto'] != 'https':
 			self.send_response(301, 'Must use SSL')
 			self.send_header('Location', 'https://icse.herokuapp.com' + self.path)
-			self.end_headers()
+			
 		else:
 			path = self.path
 			if path == '/':
@@ -112,8 +128,13 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 			try:
 				resp = open(path).read()
 				self.send_response(200, 'OK')
-				self.end_headers()
-				self.wfile.write(resp)
+				if 'Accept-Encoding' in self.headers and 'gzip' in self.headers['Accept-Encoding']:
+						self.send_header('Content-Encoding', 'gzip')
+						self.end_headers()
+						self.wfile.write(gzip_content(resp))
+				else:
+					self.end_headers()
+					self.wfile.write(resp)
 			except IOError:
 			  self.send_response(404, 'Not Found')
 			  self.end_headers()
@@ -131,23 +152,32 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 				if 'name' in content:
 					self.send_response(200, 'OK')
 					self.send_header('Content-type', 'text/html')
-					self.end_headers()
 					resp = self.db.icse.processed.find_one({"name":content['name'][0].upper()})
 					if resp is None:
+						self.end_headers()
 						self.wfile.write(open('web/404.html').read())
 					else:
-						self.wfile.write(populate(resp).encode('utf-8'))
+						if 'Accept-Encoding' in self.headers and 'gzip' in self.headers['Accept-Encoding']:
+							self.send_header('Content-Encoding', 'gzip')
+							self.end_headers()
+							self.wfile.write(gzip_content(populate(resp).encode('utf-8')))
+						else:
+							self.wfile.write(populate(resp).encode('utf-8'))
 					
 				if 'school' in content:
 					self.send_response(200, 'OK')
 					self.send_header('Content-type', 'text/html')
-					self.end_headers()
 					resp = self.db.icse.processed.find({"school":content['school'][0].upper()}).sort("name")
-					print resp
 					if resp.count() == 0:
+						self.end_headers()
 						self.wfile.write(open('web/404-school.html').read())
 					else:
-						self.wfile.write(populate_school(resp).encode('utf-8'))
+						if 'Accept-Encoding' in self.headers and 'gzip' in self.headers['Accept-Encoding']:
+							self.send_header('Content-Encoding', 'gzip')
+							self.end_headers()
+							self.wfile.write(gzip_content(populate_school(resp).encode('utf-8')))
+						else:
+							self.wfile.write(populate_school(resp).encode('utf-8'))
 			else:
 				self.send_response(403, 'Not authorised')
 				self.send_header('Content-type', 'text/html')
