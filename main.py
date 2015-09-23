@@ -119,7 +119,7 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 		if '--force-ssl' in sys.argv and self.headers['X-Forwarded-Proto'] != 'https':
 			self.send_response(301, 'Must use SSL')
 			self.send_header('Location', 'https://icse.herokuapp.com' + self.path)
-			
+			self.end_headers()
 		else:
 			path = self.path
 			if path == '/':
@@ -187,7 +187,7 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 
 
-			
+	
 Handler.password = os.environ['PASSWORD']
 
 Handler.db = pymongo.MongoClient('mongodb://xrisk:{}@ds049631.mongolab.com:49631/icse'.format(os.environ['MONGO']))
