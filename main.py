@@ -146,11 +146,12 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 			self.write(resp)
 			return
 
+		with open(path) as fin:
+			resp = fin.read()
+
 		if path in hash_lookup:
 			h = hash_lookup[path]
 		else:
-			with open(path) as fin:
-				resp = fin.read()
 			h = sha_hash(resp)
 			hash_lookup[path] = h
 
