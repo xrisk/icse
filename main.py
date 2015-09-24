@@ -148,6 +148,11 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 		if path in hash_lookup:
 			h = hash_lookup[path]
+		else:
+			with open(path) as fin:
+				resp = fin.read()
+			h = sha_hash(resp)
+			hash_lookup[path] = h
 
 		if 'If-None-Match' in self.headers:
 			if h == self.headers['If-None-Match']:
@@ -156,12 +161,6 @@ class Handler(BaseHTTPServer.BaseHTTPRequestHandler):
 				self.send_header("ETag", h)
 				self.end_headers()
 				return
-
-		with open(path) as fin:
-			resp = fin.read()
-
-		h = sha_hash(resp)
-		hash_lookup[path] = h
 
 		self.send_response(200, 'OK')
 		self.send_header("Cache-Control", "no-cache, max-age=604800")
